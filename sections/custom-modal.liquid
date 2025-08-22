@@ -1,0 +1,532 @@
+{% comment %}
+  Custom Modal Section
+  
+  A comprehensive modal section that can be added to any template through
+  the Shopify theme editor. Provides full control over modal behavior,
+  appearance, and content through an intuitive admin interface.
+  
+  Features:
+  - Multiple trigger types (time, scroll, click, exit intent, page load, manual)
+  - Various content types (text, image, video, forms)
+  - Frequency controls and device targeting
+  - Development mode for testing
+  - Theme color scheme integration
+  - Responsive design
+  
+  Compatible with all Shopify themes.
+{% endcomment %}
+
+{% liquid
+  case section.settings.content_width
+    when 'content-center-aligned'
+      assign content_width = 'page-width'
+    when 'content-full-width'
+      assign content_width = 'full-width'
+  endcase
+%}
+
+{% if section.settings.enable_modal %}
+  {% render 'modal', 
+    modal_id: section.id,
+    trigger_type: section.settings.trigger_type,
+    trigger_time_delay: section.settings.trigger_time_delay,
+    trigger_scroll_percentage: section.settings.trigger_scroll_percentage,
+    trigger_click_selector: section.settings.trigger_click_selector,
+    content_type: section.settings.content_type,
+    title: section.settings.modal_title,
+    content: section.settings.modal_content,
+    form_content: section.settings.form_content,
+    image: section.settings.modal_image,
+    video_url: section.settings.video_url,
+    show_title: section.settings.show_title,
+    show_button: section.settings.show_button,
+    button_text: section.settings.button_text,
+    button_link: section.settings.button_link,
+    modal_style: section.settings.modal_style,
+    animation: section.settings.animation,
+    frequency: section.settings.frequency,
+    delay_after_trigger: section.settings.delay_after_trigger,
+    mobile_enabled: section.settings.mobile_enabled,
+    desktop_enabled: section.settings.desktop_enabled,
+    close_on_outside_click: section.settings.close_on_outside_click,
+    show_close_button: section.settings.show_close_button,
+    auto_close_after: section.settings.auto_close_after,
+    dev_mode: section.settings.dev_mode,
+    color_scheme: section.settings.color_scheme,
+    content_width: content_width,
+    blocks: section.blocks
+  %}
+
+  <script src="{{ 'modal.js' | asset_url }}" defer></script>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Custom Modal",
+  "tag": "section",
+  "class": "custom-modal-wrapper section-wrapper",
+  "blocks": [
+    {
+      "type": "@theme"
+    },
+    {
+      "type": "@app"
+    },
+    {
+      "type": "text"
+    },
+    {
+      "type": "button"
+    },
+    {
+      "type": "image"
+    },
+    {
+      "type": "group"
+    },
+    {
+      "type": "spacer"
+    },
+    {
+      "type": "icon"
+    },
+    {
+      "type": "video"
+    },
+    {
+      "type": "_divider"
+    }
+  ],
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "enable_modal",
+      "label": "Enable Modal",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "dev_mode",
+      "label": "Development Mode",
+      "default": false,
+      "info": "Keep modal open for testing (ignores frequency restrictions and auto-close)"
+    },
+    {
+      "type": "header",
+      "content": "Modal Trigger"
+    },
+    {
+      "type": "select",
+      "id": "trigger_type",
+      "label": "Trigger Type",
+      "options": [
+        {
+          "value": "page-load",
+          "label": "Page Load"
+        },
+        {
+          "value": "time",
+          "label": "Time Delay"
+        },
+        {
+          "value": "scroll",
+          "label": "Scroll Percentage"
+        },
+        {
+          "value": "click",
+          "label": "Click Element"
+        },
+        {
+          "value": "exit",
+          "label": "Exit Intent (Desktop Only)"
+        },
+        {
+          "value": "manual",
+          "label": "Manual (via JavaScript)"
+        }
+      ],
+      "default": "page-load",
+      "info": "How the modal should be triggered"
+    },
+    {
+      "type": "range",
+      "id": "trigger_time_delay",
+      "label": "Delay (seconds)",
+      "min": 0,
+      "max": 60,
+      "step": 1,
+      "default": 3,
+      "unit": "s",
+      "visible_if": "{{ section.settings.trigger_type == 'time' }}"
+    },
+    {
+      "type": "range",
+      "id": "trigger_scroll_percentage",
+      "label": "Scroll percentage",
+      "min": 5,
+      "max": 95,
+      "step": 5,
+      "default": 50,
+      "unit": "%",
+      "visible_if": "{{ section.settings.trigger_type == 'scroll' }}"
+    },
+    {
+      "type": "text",
+      "id": "trigger_click_selector",
+      "label": "CSS Selector",
+      "default": ".modal-trigger",
+      "info": "CSS selector for clickable elements (e.g., '.my-button', '#trigger-link')",
+      "visible_if": "{{ section.settings.trigger_type == 'click' }}"
+    },
+    {
+      "type": "range",
+      "id": "delay_after_trigger",
+      "label": "Additional delay",
+      "min": 0,
+      "max": 30,
+      "step": 0.5,
+      "default": 0,
+      "unit": "s",
+      "info": "Extra delay after trigger condition is met"
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "select",
+      "id": "content_width",
+      "label": "Content Width",
+      "options": [
+        {
+          "value": "content-center-aligned",
+          "label": "Page Width"
+        },
+        {
+          "value": "content-full-width",
+          "label": "Full Width"
+        }
+      ],
+      "default": "content-center-aligned"
+    },
+    {
+      "type": "header",
+      "content": "Modal Content"
+    },
+    {
+      "type": "select",
+      "id": "content_type",
+      "label": "Content Type",
+      "options": [
+        {
+          "value": "content",
+          "label": "Text Content"
+        },
+        {
+          "value": "image",
+          "label": "Image"
+        },
+        {
+          "value": "video",
+          "label": "Video"
+        },
+        {
+          "value": "form",
+          "label": "Form"
+        }
+      ],
+      "default": "content"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_title",
+      "label": "Show Title",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "modal_title",
+      "label": "Title",
+      "default": "Welcome!",
+      "info": "Leave empty to use content from blocks instead",
+      "visible_if": "{{ section.settings.show_title }}"
+    },
+    {
+      "type": "richtext",
+      "id": "modal_content",
+      "label": "Content",
+      "default": "<p>This is your modal content. You can use blocks below for advanced layouts.</p>",
+      "info": "This content will show if no blocks are added. Use blocks for more advanced layouts.",
+      "visible_if": "{{ section.settings.content_type == 'content' }}"
+    },
+    {
+      "type": "image_picker",
+      "id": "modal_image",
+      "label": "Image",
+      "visible_if": "{{ section.settings.content_type == 'image' }}"
+    },
+    {
+      "type": "url",
+      "id": "video_url",
+      "label": "Video URL",
+      "info": "YouTube, Vimeo, or direct video file URL",
+      "visible_if": "{{ section.settings.content_type == 'video' }}"
+    },
+    {
+      "type": "richtext",
+      "id": "form_content",
+      "label": "Form content",
+      "default": "<p>Newsletter signup form will be generated automatically.</p>",
+      "info": "Custom form content or leave empty for default newsletter signup",
+      "visible_if": "{{ section.settings.content_type == 'form' }}"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_button",
+      "label": "Show action button",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button Text",
+      "default": "Close",
+      "visible_if": "{{ section.settings.show_button }}"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Button Link",
+      "info": "Optional link for the button. Leave empty to just close modal.",
+      "visible_if": "{{ section.settings.show_button }}"
+    },
+    {
+      "type": "header",
+      "content": "Appearance"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:settings.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "select",
+      "id": "modal_style",
+      "label": "Modal Style",
+      "options": [
+        {
+          "value": "default",
+          "label": "Default"
+        },
+        {
+          "value": "minimal",
+          "label": "Minimal"
+        },
+        {
+          "value": "promotional",
+          "label": "Promotional"
+        },
+        {
+          "value": "warning",
+          "label": "Warning"
+        }
+      ],
+      "default": "default",
+      "info": "Choose a visual style for the modal"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "Animation",
+      "options": [
+        {
+          "value": "fade",
+          "label": "Fade"
+        },
+        {
+          "value": "slide-up",
+          "label": "Slide Up"
+        },
+        {
+          "value": "slide-down",
+          "label": "Slide Down"
+        },
+        {
+          "value": "zoom",
+          "label": "Zoom"
+        }
+      ],
+      "default": "fade"
+    },
+    {
+      "type": "header",
+      "content": "Modal Behavior"
+    },
+    {
+      "type": "select",
+      "id": "frequency",
+      "label": "Show Frequency",
+      "options": [
+        {
+          "value": "always",
+          "label": "Always"
+        },
+        {
+          "value": "once-per-session",
+          "label": "Once per session"
+        },
+        {
+          "value": "once-per-day",
+          "label": "Once per day"
+        },
+        {
+          "value": "once-per-week",
+          "label": "Once per week"
+        }
+      ],
+      "default": "once-per-session",
+      "info": "How often the modal should appear to the same visitor"
+    },
+    {
+      "type": "header",
+      "content": "Device Settings"
+    },
+    {
+      "type": "checkbox",
+      "id": "mobile_enabled",
+      "label": "Show on Mobile",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "desktop_enabled",
+      "label": "Show on Desktop",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Close Settings"
+    },
+    {
+      "type": "checkbox",
+      "id": "close_on_outside_click",
+      "label": "Close when clicking outside",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_close_button",
+      "label": "Show close button (×)",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "auto_close_after",
+      "label": "Auto-close timer",
+      "min": 0,
+      "max": 60,
+      "step": 5,
+      "default": 0,
+      "unit": "s",
+      "info": "0 = never auto-close"
+    },
+    {
+      "type": "header",
+      "content": "Spacing"
+    },
+    {
+      "type": "range",
+      "id": "padding-block-start",
+      "label": "t:settings.top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding-block-end",
+      "label": "t:settings.bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "default": 60
+    }
+  ],
+  "presets": [
+    {
+      "name": "Welcome Modal",
+      "category": "t:categories.promotional",
+      "blocks": {
+        "text_1": {
+          "type": "text",
+          "settings": {
+            "text": "<h2>Welcome to our store!</h2>",
+            "type_preset": "h2"
+          }
+        },
+        "text_2": {
+          "type": "text",
+          "settings": {
+            "text": "<p>Discover our latest products and exclusive offers.</p>"
+          }
+        },
+        "button": {
+          "type": "button",
+          "settings": {
+            "label": "Shop Now",
+            "link": "shopify://collections/all",
+            "style_class": "button-primary"
+          }
+        }
+      },
+      "block_order": ["text_1", "text_2", "button"],
+      "settings": {
+        "enable_modal": true,
+        "trigger_type": "time",
+        "trigger_time_delay": 5,
+        "modal_title": "",
+        "modal_content": "",
+        "modal_style": "promotional",
+        "animation": "slide-up",
+        "frequency": "once-per-session",
+        "color_scheme": "scheme-1"
+      }
+    },
+    {
+      "name": "Newsletter Signup Modal",
+      "category": "t:categories.promotional",
+      "blocks": {
+        "text_1": {
+          "type": "text",
+          "settings": {
+            "text": "<h2>Stay Updated</h2>",
+            "type_preset": "h2"
+          }
+        },
+        "text_2": {
+          "type": "text",
+          "settings": {
+            "text": "<p>Subscribe to our newsletter for exclusive deals and updates.</p>"
+          }
+        }
+      },
+      "block_order": ["text_1", "text_2"],
+      "settings": {
+        "enable_modal": true,
+        "trigger_type": "scroll",
+        "trigger_scroll_percentage": 50,
+        "content_type": "form",
+        "modal_content": "<p>Newsletter signup form will be generated automatically.</p>",
+        "modal_style": "default",
+        "animation": "fade",
+        "frequency": "once-per-week",
+        "color_scheme": "scheme-1"
+      }
+    }
+  ]
+}
+{% endschema %}
