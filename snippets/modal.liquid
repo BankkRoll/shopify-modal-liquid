@@ -1,0 +1,615 @@
+{% comment %}
+  Universal Modal Component
+  
+  A comprehensive modal system that supports multiple trigger types, content formats,
+  and responsive behavior. Designed to work with any Shopify theme.
+  
+  Basic Usage:
+  {% render 'modal', 
+    modal_id: 'unique-modal-id',
+    trigger_type: 'scroll',
+    trigger_value: '50',
+    content_type: 'content',
+    title: 'Modal Title',
+    content: 'Modal content here'
+  %}
+
+  Core Parameters:
+  - modal_id: Unique identifier for the modal
+  - trigger_type: How modal is triggered ('time', 'scroll', 'click', 'exit', 'page-load', 'manual')
+  - trigger_value: Trigger value (seconds for time, percentage for scroll, CSS selector for click)
+  - content_type: Type of content ('content', 'video', 'form', 'image')
+  - title: Modal title text
+  - content: Modal content (HTML supported)
+  - image: Image asset for image modals
+  - video_url: Video URL for video modals (YouTube, Vimeo, or direct links)
+  - button_text: Action button text
+  - button_link: Action button URL (optional)
+  
+  Appearance:
+  - modal_style: Visual style ('default', 'minimal', 'promotional', 'warning')
+  - animation: Entry animation ('fade', 'slide-up', 'slide-down', 'zoom')
+  - color_scheme: Theme color scheme to use
+  - content_width: Content container width ('page-width', 'full-width')
+  
+  Behavior:
+  - frequency: Display frequency ('always', 'once-per-session', 'once-per-day', 'once-per-week')
+  - delay_after_trigger: Additional delay after trigger condition (seconds)
+  - mobile_enabled: Show on mobile devices (default: true)
+  - desktop_enabled: Show on desktop devices (default: true)
+  - close_on_outside_click: Close when backdrop is clicked (default: true)
+  - show_close_button: Show X close button (default: true)
+  - auto_close_after: Auto close timer in seconds (0 = disabled)
+  - dev_mode: Development mode (ignores frequency restrictions)
+{% endcomment %}
+
+{% liquid
+  assign modal_id = modal_id | default: 'modal-' | append: section.id | default: 'default'
+  assign trigger_type = trigger_type | default: 'page-load'
+  assign trigger_value = trigger_value | default: '0'
+  assign content_type = content_type | default: 'content'
+  assign title = title | default: ''
+  assign content = content | default: 'Modal content'
+  assign button_text = button_text | default: 'Close'
+  assign button_link = button_link | default: ''
+  assign modal_style = modal_style | default: 'default'
+  assign animation = animation | default: 'fade'
+  assign frequency = frequency | default: 'once-per-session'
+  assign delay_after_trigger = delay_after_trigger | default: '0'
+  assign mobile_enabled = mobile_enabled | default: true
+  assign desktop_enabled = desktop_enabled | default: true
+  assign close_on_outside_click = close_on_outside_click | default: true
+  assign show_close_button = show_close_button | default: true
+  assign auto_close_after = auto_close_after | default: '0'
+  assign color_scheme = color_scheme | default: 'scheme-1'
+  assign content_width = content_width | default: 'page-width'
+  assign dev_mode = dev_mode | default: false
+  assign show_title = show_title | default: true
+  assign show_button = show_button | default: true
+  
+  # Check for blocks content
+  assign has_blocks = false
+  if blocks and blocks.size > 0
+    assign has_blocks = true
+  endif
+  
+  # Set trigger value based on type
+  case trigger_type
+    when 'time'
+      assign trigger_value = trigger_time_delay | default: trigger_value
+    when 'scroll'
+      assign trigger_value = trigger_scroll_percentage | default: trigger_value
+    when 'click'
+      assign trigger_value = trigger_click_selector | default: trigger_value
+  endcase
+%}
+
+<div 
+  id="{{ modal_id }}"
+  class="modal modal--{{ modal_style }} modal--{{ animation }} color-{{ color_scheme }}"
+  data-modal-trigger-type="{{ trigger_type }}"
+  data-modal-trigger-value="{{ trigger_value }}"
+  data-modal-frequency="{{ frequency }}"
+  data-modal-delay="{{ delay_after_trigger }}"
+  data-modal-mobile="{{ mobile_enabled }}"
+  data-modal-desktop="{{ desktop_enabled }}"
+  data-modal-close-outside="{{ close_on_outside_click }}"
+  data-modal-auto-close="{{ auto_close_after }}"
+  data-modal-dev-mode="{{ dev_mode }}"
+  data-modal-id="{{ modal_id }}"
+  style="display: none;"
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  {% if title != blank or has_blocks %}aria-labelledby="{{ modal_id }}-title"{% endif %}
+>
+  <div class="modal__backdrop"></div>
+  
+  <div class="modal__container {{ content_width }}">
+    <div class="modal__content modal__content--{{ content_type }}">
+      
+      {% if show_close_button %}
+        <button class="modal__close" aria-label="Close modal" data-modal-close>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      {% endif %}
+
+      {% if show_title and title != blank %}
+        <h2 id="{{ modal_id }}-title" class="modal__title">{{ title }}</h2>
+      {% endif %}
+
+      <div class="modal__body">
+        {% if has_blocks %}
+          <div class="modal__blocks spacing-style">
+            {% for block in blocks %}
+              <div class="modal__block" {{ block.shopify_attributes }}>
+                {% render block %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+        {% case content_type %}
+          {% when 'video' %}
+            {% if video_url contains 'youtube' or video_url contains 'youtu.be' %}
+              {% assign video_id = video_url | split: '/' | last | split: '?' | first | split: '&' | first %}
+              {% if video_url contains 'youtu.be' %}
+                {% assign video_id = video_url | split: 'youtu.be/' | last | split: '?' | first | split: '&' | first %}
+              {% endif %}
+              <div class="modal__video-wrapper">
+                <iframe 
+                  src="https://www.youtube.com/embed/{{ video_id }}?autoplay=1&rel=0&modestbranding=1"
+                  frameborder="0" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                  allowfullscreen
+                  class="modal__video"
+                ></iframe>
+              </div>
+            {% elsif video_url contains 'vimeo' %}
+              {% assign video_id = video_url | split: '/' | last | split: '?' | first %}
+              <div class="modal__video-wrapper">
+                <iframe 
+                  src="https://player.vimeo.com/video/{{ video_id }}?autoplay=1&color=ffffff&title=0&byline=0&portrait=0"
+                  frameborder="0" 
+                  allow="autoplay; fullscreen; picture-in-picture" 
+                  allowfullscreen
+                  class="modal__video"
+                ></iframe>
+              </div>
+            {% else %}
+              <div class="modal__video-wrapper">
+                <video autoplay muted playsinline controls class="modal__video">
+                  <source src="{{ video_url }}" type="video/mp4">
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            {% endif %}
+
+          {% when 'image' %}
+            {% if image %}
+              <div class="modal__image-wrapper">
+                {{
+                  image
+                  | image_url: width: 800
+                  | image_tag:
+                    loading: 'lazy',
+                    class: 'modal__image',
+                    alt: image.alt | default: title
+                }}
+              </div>
+            {% endif %}
+            {% if content != blank %}
+              <div class="modal__text">{{ content }}</div>
+            {% endif %}
+
+          {% when 'form' %}
+            {% assign form_content = form_content | default: content %}
+            {% if form_content contains '<form' %}
+              {{ form_content }}
+            {% else %}
+              <form class="modal__form" action="/contact#newsletter" method="post" accept-charset="UTF-8">
+                <input type="hidden" name="form_type" value="customer">
+                <input type="hidden" name="utf8" value="✓">
+                {% if form_content != blank %}
+                  {{ form_content }}
+                {% else %}
+                  <div class="modal__form-field">
+                    <label for="{{ modal_id }}-email" class="modal__label visually-hidden">Email address</label>
+                    <input type="email" id="{{ modal_id }}-email" name="contact[email]" placeholder="Enter your email address" required class="modal__input">
+                  </div>
+                  <div class="modal__form-actions">
+                    <button type="submit" class="modal__button modal__button--primary">Subscribe</button>
+                  </div>
+                {% endif %}
+              </form>
+            {% endif %}
+
+          {% else %}
+            <div class="modal__text">{{ content }}</div>
+        {% endcase %}
+        {% endif %}
+      </div>
+
+      {% if show_button and button_text != blank %}
+        <div class="modal__actions">
+          {% if button_link != blank %}
+            <a href="{{ button_link }}" class="modal__button modal__button--primary">
+              {{ button_text }}
+            </a>
+          {% else %}
+            <button type="button" class="modal__button modal__button--primary" data-modal-close>
+              {{ button_text }}
+            </button>
+          {% endif %}
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+{% stylesheet %}
+  /**
+   * Universal Modal Styles
+   * 
+   * Theme-agnostic modal system with responsive design,
+   * accessibility features, and multiple style variants.
+   * 
+   * Compatible with all Shopify themes.
+   */
+
+  /* Base Modal Styles */
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: var(--layer-modal, 9999);
+    overflow-y: auto;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  .modal.modal--active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .modal__backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(2px);
+  }
+
+  .modal__container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    padding: 2rem;
+    z-index: 1;
+  }
+
+  .modal__content {
+    position: relative;
+    background: var(--color-background);
+    border-radius: var(--border-radius-lg, 12px);
+    box-shadow: var(--shadow-modal, 0 20px 40px rgba(0, 0, 0, 0.2));
+    border: 1px solid var(--color-border);
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+  }
+
+  .modal.modal--active .modal__content {
+    transform: translateY(0);
+  }
+
+  .modal__close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    color: var(--color-foreground);
+    z-index: 10;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+  }
+
+  .modal__close:hover {
+    background: var(--color-button-hover, rgba(0, 0, 0, 0.05));
+    transform: scale(1.05);
+  }
+
+  .modal__title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    padding: 2rem 2rem 0 2rem;
+    color: var(--color-foreground);
+    line-height: 1.3;
+  }
+
+  .modal__body {
+    padding: 1rem 2rem 2rem 2rem;
+  }
+
+  .modal__text {
+    color: var(--color-foreground);
+    line-height: 1.6;
+  }
+
+  /* Block Content Styles */
+  .modal__blocks {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .modal__block {
+    width: 100%;
+  }
+
+  .modal .group-block {
+    border-radius: var(--border-radius, 8px);
+    background: rgba(from var(--color-foreground) r g b / 0.02);
+  }
+
+  .modal .group-block-content {
+    padding: 1rem;
+  }
+
+  .modal__actions {
+    padding: 0 2rem 2rem 2rem;
+  }
+
+  .modal__button {
+    display: inline-block;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+  }
+
+  .modal__button--primary {
+    background: var(--color-button-primary);
+    color: var(--color-button-primary-text);
+  }
+
+  .modal__button--primary:hover {
+    background: var(--color-button-primary-hover);
+    transform: translateY(-1px);
+  }
+
+  /* Video Content */
+  .modal__video-wrapper {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 */
+    height: 0;
+    overflow: hidden;
+  }
+
+  .modal__video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Image Content */
+  .modal__image-wrapper {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  .modal__image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+
+  /* Form Content */
+  .modal__form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .modal__form-field {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal__input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius, 4px);
+    font-size: 1rem;
+    background: var(--color-background);
+    color: var(--color-foreground);
+    transition: border-color 0.2s ease;
+  }
+
+  .modal__input:focus {
+    outline: none;
+    border-color: var(--color-button-primary);
+    box-shadow: 0 0 0 2px rgba(from var(--color-button-primary) r g b / 0.2);
+  }
+
+  .modal__input::placeholder {
+    color: var(--color-foreground-75, rgba(from var(--color-foreground) r g b / 0.75));
+  }
+
+  .modal__form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+
+  .modal__label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--color-foreground);
+  }
+
+  .visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+
+  /* Style Variants */
+  .modal--minimal .modal__content {
+    box-shadow: var(--shadow-minimal, 0 8px 24px rgba(0, 0, 0, 0.1));
+    border: none;
+  }
+
+  .modal--promotional .modal__content {
+    background: linear-gradient(135deg, rgba(from var(--color-primary) r g b / 0.9) 0%, rgba(from var(--color-secondary) r g b / 0.9) 100%);
+    color: var(--color-primary-text, white);
+    border: 1px solid rgba(from var(--color-primary) r g b / 0.3);
+  }
+
+  .modal--promotional .modal__title,
+  .modal--promotional .modal__text {
+    color: var(--color-primary-text, white);
+  }
+
+  .modal--promotional .modal__close {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+  }
+
+  .modal--warning .modal__content {
+    border-left: 4px solid var(--color-warning, #f39c12);
+    background: rgba(from var(--color-warning) r g b / 0.05);
+  }
+
+  /* Animation Styles */
+  .modal--slide-up .modal__content {
+    transform: translateY(100px);
+  }
+
+  .modal--slide-down .modal__content {
+    transform: translateY(-100px);
+  }
+
+  .modal--zoom .modal__content {
+    transform: scale(0.8);
+  }
+
+  .modal--zoom.modal--active .modal__content {
+    transform: scale(1);
+  }
+
+  /* Responsive Design */
+  @media screen and (max-width: 768px) {
+    .modal__container {
+      padding: 1rem;
+      align-items: flex-start;
+    }
+
+    .modal__content {
+      margin-top: 2rem;
+      margin-bottom: 2rem;
+      max-width: 100%;
+    }
+
+    .modal__title {
+      font-size: 1.25rem;
+      padding: 1.5rem 1.5rem 0 1.5rem;
+    }
+
+    .modal__body {
+      padding: 1rem 1.5rem 1.5rem 1.5rem;
+    }
+
+    .modal__actions {
+      padding: 0 1.5rem 1.5rem 1.5rem;
+    }
+
+    .modal__close {
+      top: 0.75rem;
+      right: 0.75rem;
+      width: 36px;
+      height: 36px;
+    }
+
+    .modal__blocks {
+      gap: 1rem;
+    }
+  }
+
+  /* Accessibility Support */
+  @media (prefers-reduced-motion: reduce) {
+    .modal,
+    .modal__content {
+      transition: none;
+    }
+  }
+
+  /* Focus Management */
+  .modal__content:focus {
+    outline: 2px solid var(--color-button-primary);
+    outline-offset: 2px;
+  }
+
+  /* Content Width Variants */
+  .modal__container.page-width {
+    max-width: var(--page-width, 1200px);
+    margin: 0 auto;
+  }
+
+  .modal__container.full-width {
+    max-width: 100%;
+  }
+
+  /* Development Mode Styles */
+  .modal[data-modal-dev-mode="true"] {
+    border: 3px dashed #ff6b6b;
+  }
+
+  .modal[data-modal-dev-mode="true"]::before {
+    content: "DEV MODE";
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: #ff6b6b;
+    color: white;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: bold;
+    border-radius: 3px;
+    z-index: 10001;
+    font-family: monospace;
+  }
+
+  /* Theme Integration */
+  .modal.color-scheme-1 {
+    --color-foreground: rgb(var(--color-foreground));
+    --color-background: rgb(var(--color-background));
+  }
+
+  /* Responsive Content Width */
+  @media screen and (min-width: 769px) {
+    .modal__content {
+      max-width: 700px;
+    }
+    
+    .modal--promotional .modal__content {
+      max-width: 800px;
+    }
+  }
+{% endstylesheet %}
